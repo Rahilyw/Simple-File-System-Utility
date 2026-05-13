@@ -1,88 +1,134 @@
-SFS-FAT12: Simple File System Utility
-A suite of C-based utilities designed to interface with and manipulate FAT12 file system images. This project implements low-level disk operations, including metadata extraction, directory traversal, and file I/O within a simulated MS-DOS environment.
+# SFS-FAT12 — Simple File System Utility
 
-🚀 Overview
-This project provides a bridge between a Linux environment and a FAT12 disk image (.IMA). It involves direct binary manipulation of the disk's structures, including the BIOS Parameter Block (BPB), File Allocation Tables (FAT), and Root Directory entries.
+> A suite of C utilities for low-level manipulation of FAT12 disk images, implementing the full read/write lifecycle of an MS-DOS file system from scratch.
 
-Key Technical Challenges
-Bit Manipulation: Implementing logic to parse 12-bit FAT entries (packed across byte boundaries).
+---
 
-Endianness: Handling Little-Endian data storage prevalent in Intel-based architectures.
+## Overview
 
-Recursion: Developing deep-walk algorithms to traverse multi-layered subdirectories within the Data Area.
+This project provides a complete CLI toolset to interface with FAT12 `.IMA` disk images from a Linux environment. It involves direct binary parsing of disk structures — the BIOS Parameter Block, File Allocation Tables, and Root/Sub-directory entries — without any library abstractions.
 
-Memory Mapping: Utilizing mmap() for efficient random access to the disk image.
+The implementation emphasizes:
 
-🛠️ Utilities
-The suite consists of four primary tools:
+- **Correctness at the byte level** — manually unpacking 12-bit FAT entries that span byte boundaries, handling Little-Endian multi-byte integers, and reconstructing fragmented files via cluster chains
+- **Recursive filesystem traversal** — walking arbitrarily deep subdirectory trees by following cluster pointers through the Data Region
+- **Writeback integrity** — allocating clusters, updating FAT copies, writing directory entries, and syncing timestamps on `diskput` without corrupting existing data
 
-1. diskinfo
-Displays high-level metadata about the file system.
+---
 
-Metrics: OS Name, Label, Total/Free Disk Size.
+## Utilities
 
-Statistics: Total file count (recursive), number of FAT copies, and sectors per FAT.
+### `diskinfo`
+Parses the Boot Sector (BPB) to surface filesystem metadata.
 
-2. disklist
-A recursive directory listing tool.
+```
+OS Name:            MS-DOS
+Label of the disk:  MYDISK
+Total size:         1,474,560 bytes
+Free size:          614,400 bytes
+==============
+Number of files:    42
+=============
+FAT copies:         2
+Sectors per FAT:    9
+```
 
-Formats output to show file types (F for files, D for directories).
+### `disklist`
+Recursively walks all directories, printing each entry with type, size, name, and decoded creation timestamp.
 
-Displays file sizes, names, and creation timestamps formatted from raw FAT12 date/time bytes.
+```
+/
+==================
+F       4096  HELLO   .TXT  2024-03-15 14:22:00
+D          0  DOCS             2024-03-10 09:00:00
 
-3. diskget
-Retrieves a file from the disk image and copies it to the host Linux system.
+/DOCS
+==================
+F      12884  REPORT  .PDF  2024-03-12 11:45:30
+```
 
-Verifies file existence in the root directory.
+### `diskget`
+Reconstructs a file from the disk image to the host filesystem by following its FAT cluster chain.
 
-Performs block-by-block reconstruction using the File Allocation Table.
+```bash
+./diskget disk.IMA REPORT.PDF
+# Writes REPORT.PDF to current directory
+```
 
-4. diskput
-Copies a file from the host Linux system into a specified directory in the disk image.
+### `diskput`
+Copies a Linux file into a specified path within the disk image — allocating clusters, updating both FAT copies, inserting a directory entry, and syncing the Linux `mtime` as the FAT12 creation/write timestamp.
 
-Dynamic Allocation: Updates the FAT and directory entries.
+```bash
+./diskput disk.IMA /DOCS/NOTES/readme.txt
+```
 
-Validation: Checks for existing filenames, directory paths, and sufficient disk space.
+---
 
-Timestamp Sync: Synchronizes Linux "Last Modified" time with FAT12 creation metadata.
+## Key Implementation Challenges
 
-📂 File System Structure
-The implementation relies on an intimate understanding of the FAT12 layout:
+**12-bit FAT entry parsing** — FAT12 packs two 12-bit entries into every three bytes. Extracting even- vs. odd-indexed entries requires different nibble-shift logic and careful boundary handling.
 
-Reserved Region: Boot Sector (Sector 0).
+**Endianness** — All multi-byte fields (sector counts, cluster numbers, file sizes) are stored Little-Endian. Every read and write goes through explicit byte-order handling rather than casting raw structs.
 
-FAT Region: Two copies of the File Allocation Table.
+**Cluster chain reconstruction** — Files are read block-by-block by following the FAT linked list from the starting cluster until a terminal marker (`0xFF8–0xFFF`) is reached.
 
-Root Directory Region: Fixed-size entries following the FATs.
+**Writeback consistency** — `diskput` must atomically update two FAT copies and insert a directory entry. Insufficient free space, missing subdirectory paths, and duplicate filenames are caught before any writes occur.
 
-Data Region: Clusters containing file data and subdirectory tables.
+**Timestamp encoding** — FAT12 stores date and time in packed 16-bit fields (year offset from 1980, 2-second time resolution). `diskput` extracts `mtime` from `stat()` and re-encodes it into this format.
 
-⚙️ Build & Usage
-Prerequisites
-GCC Compiler
+---
 
-Linux/Unix environment (or WSL)
+## Build & Usage
 
-xxd (for raw binary debugging)
+**Prerequisites:** GCC, Linux/Unix (or WSL), `make`
 
-Compilation
-Build all utilities using the provided Makefile:
-
-Bash
+```bash
+# Compile all utilities
 make
-Execution
-Bash
-# Get disk statistics
+
+# Inspect disk metadata
 ./diskinfo disk.IMA
 
-# List all files and subdirectories
+# List all files recursively
 ./disklist disk.IMA
 
-# Copy a file from the image to Linux
-./diskget disk.IMA FILE.PDF
+# Extract a file from the image
+./diskget disk.IMA FILENAME.TXT
 
-# Copy a file from Linux into a specific subdirectory in the image
-./diskput disk.IMA /SUBDIR1/SUBDIR2/NEWFILE.TXT
+# Insert a file into a subdirectory
+./diskput disk.IMA /SUBDIR/FILENAME.TXT
+```
 
-🎓 Academic Context
-Developed as part of CSc 360: Operating Systems at the University of Victoria. The project emphasizes the importance of system calls, error handling, and manual memory management in C.
+---
+
+## File System Layout
+
+```
+┌─────────────────────────────┐
+│  Boot Sector (Sector 0)     │  ← BPB: geometry, cluster size, FAT layout
+├─────────────────────────────┤
+│  FAT Region (×2 copies)     │  ← 12-bit linked cluster map
+├─────────────────────────────┤
+│  Root Directory Region      │  ← Fixed-size 32-byte entries
+├─────────────────────────────┤
+│  Data Region                │  ← File contents + subdirectory tables
+└─────────────────────────────┘
+```
+
+---
+
+## Technical Stack
+
+| | |
+|---|---|
+| **Language** | C (C99) |
+| **Memory access** | `mmap()` for efficient random I/O on the disk image |
+| **Build system** | GNU Make |
+| **Platform** | Linux / Unix |
+| **Filesystem spec** | FAT12 (MS-DOS) |
+
+---
+
+## Academic Context
+
+Developed for **CSc 360: Operating Systems** at the University of Victoria. The assignment targets manual memory management, system call error handling, and the kind of low-level data structure work that library abstractions normally hide.
