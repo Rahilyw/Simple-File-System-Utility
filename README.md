@@ -146,3 +146,10 @@ make
 ## Academic Context
 
 Developed for **CSc 360: Operating Systems** at the University of Victoria. The assignment targets manual memory management, system call error handling, and the kind of low-level data structure work that library abstractions normally hide.
+
+## ⚠️ Academic Integrity Notice
+
+This repository is maintained for portfolio and educational purposes only. 
+If you are currently enrolled in CSc 360 at the University of Victoria or a 
+similar OS course, please note that using this code in your own 
+assignments may constitute a violation of Academic Integrity policies.
