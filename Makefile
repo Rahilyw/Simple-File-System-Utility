@@ -1,20 +1,27 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -D_DEFAULT_SOURCE
+CFLAGS = -Wall -g -Iinclude
+SRC_DIR = src
+OBJ = $(SRC_DIR)/fat12.o
 TARGETS = diskinfo disklist diskget diskput
 
 all: $(TARGETS)
 
-diskinfo: diskinfo.c
-	$(CC) $(CFLAGS) -o diskinfo diskinfo.c
+# Link each utility with the shared fat12 logic
+diskinfo: $(SRC_DIR)/diskinfo.c $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
-disklist: disklist.c
-	$(CC) $(CFLAGS) -o disklist disklist.c
+disklist: $(SRC_DIR)/disklist.c $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
-diskget: diskget.c
-	$(CC) $(CFLAGS) -o diskget diskget.c
+diskget: $(SRC_DIR)/diskget.c $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
-diskput: diskput.c
-	$(CC) $(CFLAGS) -o diskput diskput.c
+diskput: $(SRC_DIR)/diskput.c $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
+
+# Compile the shared logic into an object file
+$(SRC_DIR)/fat12.o: $(SRC_DIR)/fat12.c $(SRC_DIR)/fat12.h
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/fat12.c -o $@
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) $(SRC_DIR)/*.o
