@@ -77,7 +77,21 @@ Copies a Linux file into a specified path within the disk image — allocating c
 **Timestamp encoding** — FAT12 stores date and time in packed 16-bit fields (year offset from 1980, 2-second time resolution). `diskput` extracts `mtime` from `stat()` and re-encodes it into this format.
 
 ---
+## 📂 Repository Structure
 
+The project is organized to promote code reusability across the different utilities:
+```text
+.
+├── src/
+│   ├── diskinfo.c       # Metadata and disk statistics
+│   ├── disklist.c       # Recursive directory listing
+│   ├── diskget.c        # File extraction from image
+│   └── diskput.c        # File insertion into image
+├── .gitignore           # Ignores binaries and object files
+├── Makefile             # Build instructions
+├── README.md            # Project documentation
+└── disk.IMA             # Sample FAT12 disk image
+```
 ## Build & Usage
 
 **Prerequisites:** GCC, Linux/Unix (or WSL), `make`
