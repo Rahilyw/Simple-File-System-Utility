@@ -1,0 +1,12 @@
+# Executables
+diskinfo
+disklist
+diskget
+diskput
+
+# Disk Images
+*.IMA
+*.img
+
+# Object files
+*.o
