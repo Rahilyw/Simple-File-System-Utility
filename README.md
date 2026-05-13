@@ -6,13 +6,13 @@
 
 ## Overview
 
-This project provides a complete CLI toolset to interface with FAT12 `.IMA` disk images from a Linux environment. It involves direct binary parsing of disk structures — the BIOS Parameter Block, File Allocation Tables, and Root/Sub-directory entries — without any library abstractions.
+This project provides a complete CLI toolset to interface with FAT12 `.IMA` disk images from a Linux environment. It involves direct binary parsing of disk structures, the BIOS Parameter Block, File Allocation Tables, and Root/Sub-directory entries, without any library abstractions.
 
 The implementation emphasizes:
 
-- **Correctness at the byte level**  manually unpacking 12-bit FAT entries that span byte boundaries, handling Little-Endian multi-byte integers, and reconstructing fragmented files via cluster chains
-- **Recursive filesystem traversal**  walking arbitrarily deep subdirectory trees by following cluster pointers through the Data Region
-- **Writeback integrity** allocating clusters, updating FAT copies, writing directory entries, and syncing timestamps on `diskput` without corrupting existing data
+- **Correctness at the byte level** - manually unpacking 12-bit FAT entries that span byte boundaries, handling Little-Endian multi-byte integers, and reconstructing fragmented files via cluster chains
+- **Recursive filesystem traversal** - walking arbitrarily deep subdirectory trees by following cluster pointers through the Data Region
+- **Writeback integrity** allocating - clusters, updating FAT copies, writing directory entries, and syncing timestamps on `diskput` without corrupting existing data
 
 ---
 
